@@ -191,10 +191,11 @@
   /* ITEMS EDITOR */
   .items-editor{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;}
   .items-editor-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;}
-  .item-row{display:grid;grid-template-columns:1fr 80px 70px 32px;gap:8px;align-items:center;margin-bottom:8px;}
-  .item-row input{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--text);font-family:'Inter',sans-serif;font-size:12px;outline:none;width:100%;}
-  .item-row input:focus{border-color:var(--accent2);}
-  .item-row input::placeholder{color:var(--muted);}
+  .item-block{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:10px;position:relative;}
+  .item-block-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .item-block-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--accent2);text-transform:uppercase;}
+  .item-block .form-grid{gap:10px;}
+  .item-block .form-input,.item-block .form-select{padding:8px 12px;font-size:12px;}
   .remove-item-btn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:5px;width:32px;height:34px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
   .remove-item-btn:hover{color:var(--danger);border-color:var(--danger);}
   .add-item-btn{background:transparent;border:1px dashed var(--border);color:var(--muted);border-radius:5px;padding:7px 14px;cursor:pointer;font-size:12px;width:100%;margin-top:8px;transition:all .15s;font-family:'Inter',sans-serif;}
@@ -752,15 +753,9 @@
     </div>
     <div class="divider"></div>
     <div class="items-editor">
-      <div class="items-editor-title">Zapatillas que vienen en este pedido</div>
-      <div style="display:grid;grid-template-columns:1fr 80px 70px 32px;gap:8px;margin-bottom:8px">
-        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px">ZAPATILLA / MODELO</span>
-        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px">TALLA</span>
-        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px">CANT.</span>
-        <span></span>
-      </div>
+      <div class="items-editor-title">Zapatillas en este pedido</div>
       <div id="pedido-items-rows"></div>
-      <button class="add-item-btn" onclick="addPedidoItemRow()">＋ Añadir zapatilla al pedido</button>
+      <button class="add-item-btn" onclick="addPedidoItemRow()">＋ Añadir zapatilla</button>
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closePedidoModal()">Cancelar</button>
@@ -1015,31 +1010,96 @@ function closePedidoModal() { document.getElementById('pedido-modal').classList.
 function renderPedidoItemRows(rows = []) {
   const container = document.getElementById('pedido-items-rows');
   container.innerHTML = '';
-  const data = rows.length ? rows : [{nombre:'', talla:'', cantidad:1}];
-  data.forEach((item, i) => addPedidoItemRow(item));
+  const data = rows.length ? rows : [{}];
+  data.forEach(item => addPedidoItemRow(item));
 }
 
 function addPedidoItemRow(item = {}) {
   const container = document.getElementById('pedido-items-rows');
-  const row = document.createElement('div');
-  row.className = 'item-row';
-  row.innerHTML = `
-    <input type="text" placeholder="Ej: Nike Air Force 1 Blancas" value="${item.nombre||''}">
-    <input type="text" placeholder="42" value="${item.talla||''}">
-    <input type="number" placeholder="1" min="1" value="${item.cantidad||1}">
-    <button class="remove-item-btn" onclick="this.closest('.item-row').remove()">✕</button>`;
-  container.appendChild(row);
+  const idx = container.children.length + 1;
+  const block = document.createElement('div');
+  block.className = 'item-block';
+  block.innerHTML = `
+    <div class="item-block-header">
+      <span class="item-block-title">Zapatilla ${idx}</span>
+      <button class="remove-item-btn" onclick="this.closest('.item-block').remove();renumberBlocks()" style="height:28px;width:28px">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Marca</label>
+        <input type="text" class="form-input pi-marca" placeholder="Nike, Jordan, Adidas..." value="${item.marca||item.nombre?.split(' ')[0]||''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Modelo</label>
+        <input type="text" class="form-input pi-modelo" placeholder="Air Force 1, Yeezy 350..." value="${item.modelo||item.nombre?.split(' ').slice(1).join(' ')||''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Colorway</label>
+        <input type="text" class="form-input pi-colorway" placeholder="Triple Black, Bred..." value="${item.colorway||item.color||''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Talla EU</label>
+        <input type="text" class="form-input pi-talla" placeholder="42, 42.5..." value="${item.talla||''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Precio compra (€)</label>
+        <input type="number" class="form-input pi-compra" placeholder="0.00" min="0" step="0.01" value="${item.compra||''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Precio venta est. (€)</label>
+        <input type="number" class="form-input pi-venta" placeholder="0.00" min="0" step="0.01" value="${item.venta||''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Condición</label>
+        <select class="form-select pi-condicion">
+          <option value="Nuevo con caja" ${item.condicion==='Nuevo con caja'?'selected':''}>Nuevo con caja</option>
+          <option value="Nuevo sin caja" ${item.condicion==='Nuevo sin caja'?'selected':''}>Nuevo sin caja</option>
+          <option value="Como nuevo" ${item.condicion==='Como nuevo'?'selected':''}>Como nuevo</option>
+          <option value="Buen estado" ${item.condicion==='Buen estado'?'selected':''}>Buen estado</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cantidad</label>
+        <input type="number" class="form-input pi-cantidad" placeholder="1" min="1" value="${item.cantidad||1}">
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Enlace / Stock (opcional)</label>
+        <input type="url" class="form-input pi-link" placeholder="https://stockx.com/..." value="${item.link||''}">
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Notas</label>
+        <input type="text" class="form-input pi-notas" placeholder="Detalles, condiciones, procedencia..." value="${item.notas||''}">
+      </div>
+    </div>`;
+  container.appendChild(block);
+}
+
+function renumberBlocks() {
+  document.querySelectorAll('#pedido-items-rows .item-block-title').forEach((el, i) => {
+    el.textContent = 'Zapatilla ' + (i + 1);
+  });
 }
 
 function getPedidoItems() {
-  const rows = document.getElementById('pedido-items-rows').querySelectorAll('.item-row');
+  const blocks = document.getElementById('pedido-items-rows').querySelectorAll('.item-block');
   const result = [];
-  rows.forEach(row => {
-    const inputs = row.querySelectorAll('input');
-    const nombre = inputs[0].value.trim();
-    const talla = inputs[1].value.trim();
-    const cantidad = parseInt(inputs[2].value)||1;
-    if (nombre) result.push({nombre, talla, cantidad});
+  blocks.forEach(block => {
+    const marca = block.querySelector('.pi-marca').value.trim();
+    const modelo = block.querySelector('.pi-modelo').value.trim();
+    if (!marca && !modelo) return;
+    result.push({
+      nombre: (marca + ' ' + modelo).trim(),
+      marca, modelo,
+      colorway: block.querySelector('.pi-colorway').value.trim(),
+      color: block.querySelector('.pi-colorway').value.trim(),
+      talla: block.querySelector('.pi-talla').value.trim(),
+      compra: parseFloat(block.querySelector('.pi-compra').value) || 0,
+      venta: parseFloat(block.querySelector('.pi-venta').value) || 0,
+      condicion: block.querySelector('.pi-condicion').value,
+      cantidad: parseInt(block.querySelector('.pi-cantidad').value) || 1,
+      link: block.querySelector('.pi-link').value.trim(),
+      notas: block.querySelector('.pi-notas').value.trim(),
+    });
   });
   return result;
 }
@@ -1255,7 +1315,12 @@ function renderPedidos() {
         </div>
         ${its.length ? `<div class="items-coming">${its.map(it=>`
           <div class="item-chip">
-            <div><div class="item-chip-name">${it.nombre}</div><div class="item-chip-sub">Talla: ${it.talla||'—'}</div></div>
+            <div>
+              <div class="item-chip-name">${it.marca||''} ${it.modelo||it.nombre||'—'}</div>
+              <div class="item-chip-sub">EU ${it.talla||'—'} · ${it.colorway||it.color||'sin colorway'}</div>
+              ${it.compra ? `<div class="item-chip-sub">Compra: €${it.compra}</div>` : ''}
+              ${it.link ? `<a href="${it.link}" target="_blank" style="font-size:10px;color:var(--accent2);text-decoration:none">🔗 Ver stock</a>` : ''}
+            </div>
             <div class="item-chip-qty">${it.cantidad||1}×</div>
           </div>`).join('')}</div>` : '<div style="color:var(--muted);font-size:12px;margin:12px 0">Sin zapatillas detalladas</div>'}
         ${p.notas ? `<div style="font-size:12px;color:var(--muted);padding-top:12px;border-top:1px solid var(--border)">📝 ${p.notas}</div>` : ''}
@@ -1423,65 +1488,78 @@ function initSneakers() {
 }
 initSneakers();
 
-// ─── 17TRACK API CONFIG ───
-// Consigue tu API key gratis en: https://www.17track.net/en/apiCenter
-const TRACK17_KEY = ''; // ← Pon tu API key aquí
+// ─── SHIP24 TRACKING ───
+const SHIP24_KEY = 'apik_qT5O5IR77uvWv3bbYFOklsAajG1gUt';
 
 async function fetchTracking(trackingNumber) {
-  if (!TRACK17_KEY) return { error: 'nokey' };
   try {
-    // Register tracking number first
-    await fetch('https://api.17track.net/track/v2.2/register', {
+    // Step 1: Create tracker
+    const createRes = await fetch('https://api.ship24.com/public/v1/trackers', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', '17token': TRACK17_KEY },
-      body: JSON.stringify([{ number: trackingNumber }])
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + SHIP24_KEY
+      },
+      body: JSON.stringify({ trackingNumber })
     });
-    // Get tracking info
-    const res = await fetch('https://api.17track.net/track/v2.2/gettrackinfo', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', '17token': TRACK17_KEY },
-      body: JSON.stringify([{ number: trackingNumber }])
+    const createData = await createRes.json();
+    const trackerId = createData?.data?.tracker?.trackerId;
+    if (!trackerId) return { error: 'notracker', msg: 'No se pudo crear el tracker' };
+
+    // Step 2: Get tracking results
+    const res = await fetch(`https://api.ship24.com/public/v1/trackers/${trackerId}/results`, {
+      headers: { 'Authorization': 'Bearer ' + SHIP24_KEY }
     });
     const data = await res.json();
-    if (data.code !== 0) return { error: 'apierror', msg: data.message };
-    const info = data.data?.accepted?.[0]?.track;
-    return { ok: true, info };
+    const events = data?.data?.trackings?.[0]?.events || [];
+    const shipment = data?.data?.trackings?.[0]?.shipment;
+    return { ok: true, events, shipment };
   } catch(e) {
     return { error: 'network', msg: e.message };
   }
 }
 
+const ship24StatusMap = {
+  'in_transit': '📦 En tránsito',
+  'delivered': '✅ Entregado',
+  'pending': '⏳ Pendiente',
+  'out_for_delivery': '🚚 En reparto',
+  'exception': '⚠️ Incidencia',
+  'expired': '❌ Expirado',
+  'available_for_pickup': '🏪 Listo para recoger',
+};
+
 async function trackPedido(trackingNumber, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  container.innerHTML = '<div class="tracking-loading">Buscando paquete...</div>';
+  container.innerHTML = '<div class="tracking-loading">🔍 Buscando paquete en Ship24...</div>';
   const result = await fetchTracking(trackingNumber);
-  if (result.error === 'nokey') {
-    container.innerHTML = `<div class="tracking-apikey-note">
-      Para activar el tracking, añade tu API key de 17track en el código:<br>
-      <code style="background:var(--bg);padding:2px 6px;border-radius:3px;font-size:11px">const TRACK17_KEY = 'tu_key_aqui'</code><br>
-      Regístrate gratis en <a href="https://www.17track.net/en/apiCenter" target="_blank">17track.net →</a>
-    </div>`;
-    return;
-  }
+
   if (result.error) {
-    container.innerHTML = `<div style="color:var(--danger);font-size:12px">Error: ${result.msg || 'No se pudo obtener info'}</div>`;
+    container.innerHTML = `<div style="color:var(--danger);font-size:12px">⚠️ Error: ${result.msg || 'No se pudo obtener info'}</div>`;
     return;
   }
-  const info = result.info;
-  if (!info || !info.z0) {
-    container.innerHTML = '<div style="color:var(--muted);font-size:12px">Sin eventos de tracking aún. El número puede tardar en activarse.</div>';
+  if (!result.events || result.events.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:12px">Sin eventos aún. El número puede tardar unas horas en activarse.</div>';
     return;
   }
-  const events = [...(info.z0 || []), ...(info.z1 || [])].slice(0, 5);
-  container.innerHTML = events.map(e => `
+
+  const statusLabel = result.shipment?.statusCode ? (ship24StatusMap[result.shipment.statusCode] || result.shipment.statusCode) : '—';
+  const courier = result.shipment?.courier?.name || '';
+
+  container.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:600">${statusLabel}</div>
+      ${courier ? `<div style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace">${courier}</div>` : ''}
+    </div>
+    ${result.events.slice(0, 6).map(e => `
     <div class="tracking-event">
-      <div class="tracking-event-dot"></div>
+      <div class="tracking-event-dot" style="background:${e.status === 'delivered' ? 'var(--success)' : 'var(--accent2)'}"></div>
       <div class="tracking-event-info">
-        <div class="tracking-event-desc">${e.z || '—'}</div>
-        <div class="tracking-event-date">${e.a ? new Date(e.a).toLocaleString('es-ES') : '—'} ${e.c ? '· ' + e.c : ''}</div>
+        <div class="tracking-event-desc">${e.message || e.status || '—'}</div>
+        <div class="tracking-event-date">${e.datetime ? new Date(e.datetime).toLocaleString('es-ES') : '—'}${e.location ? ' · ' + e.location : ''}</div>
       </div>
-    </div>`).join('');
+    </div>`).join('')}`;
 }
 
 // ─── IDEAS ───
@@ -1631,17 +1709,17 @@ function openRecibirModal(id) {
         return Array.from({length: copies}, (_, c) => `
           <div class="recibir-item-block" data-idx="${idx}-${c}">
             <div class="recibir-item-header">
-              <span>Zapatilla ${idx * copies + c + 1}: ${it.nombre}</span>
-              <span class="recibir-item-num">Talla: ${it.talla || '?'}</span>
+              <span>Zapatilla ${idx * copies + c + 1}: ${it.marca||''} ${it.modelo||it.nombre||''}</span>
+              <span class="recibir-item-num">EU ${it.talla || '?'}</span>
             </div>
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">Marca</label>
-                <input type="text" class="form-input ri-marca" value="${it.nombre.split(' ')[0] || ''}" placeholder="Nike, Jordan...">
+                <input type="text" class="form-input ri-marca" value="${it.marca || it.nombre?.split(' ')[0] || ''}" placeholder="Nike, Jordan...">
               </div>
               <div class="form-group">
                 <label class="form-label">Modelo</label>
-                <input type="text" class="form-input ri-modelo" value="${it.nombre.split(' ').slice(1).join(' ') || it.nombre}" placeholder="Air Force 1...">
+                <input type="text" class="form-input ri-modelo" value="${it.modelo || it.nombre?.split(' ').slice(1).join(' ') || ''}" placeholder="Air Force 1...">
               </div>
               <div class="form-group">
                 <label class="form-label">Talla EU</label>
@@ -1649,32 +1727,32 @@ function openRecibirModal(id) {
               </div>
               <div class="form-group">
                 <label class="form-label">Colorway</label>
-                <input type="text" class="form-input ri-color" placeholder="Triple Black, Bred...">
+                <input type="text" class="form-input ri-color" value="${it.colorway || it.color || ''}" placeholder="Triple Black, Bred...">
               </div>
               <div class="form-group">
                 <label class="form-label">Condición</label>
                 <select class="form-select ri-condicion">
-                  <option value="Nuevo con caja" selected>Nuevo con caja</option>
-                  <option value="Nuevo sin caja">Nuevo sin caja</option>
-                  <option value="Como nuevo">Como nuevo</option>
-                  <option value="Buen estado">Buen estado</option>
+                  <option value="Nuevo con caja" ${(it.condicion||'Nuevo con caja')==='Nuevo con caja'?'selected':''}>Nuevo con caja</option>
+                  <option value="Nuevo sin caja" ${it.condicion==='Nuevo sin caja'?'selected':''}>Nuevo sin caja</option>
+                  <option value="Como nuevo" ${it.condicion==='Como nuevo'?'selected':''}>Como nuevo</option>
+                  <option value="Buen estado" ${it.condicion==='Buen estado'?'selected':''}>Buen estado</option>
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Precio compra (€)</label>
-                <input type="number" class="form-input ri-compra" placeholder="0.00" min="0" step="0.01">
+                <input type="number" class="form-input ri-compra" value="${it.compra||''}" placeholder="0.00" min="0" step="0.01">
               </div>
               <div class="form-group">
                 <label class="form-label">Precio venta est. (€)</label>
-                <input type="number" class="form-input ri-venta" placeholder="0.00" min="0" step="0.01">
+                <input type="number" class="form-input ri-venta" value="${it.venta||''}" placeholder="0.00" min="0" step="0.01">
               </div>
               <div class="form-group">
-                <label class="form-label">Enlace Vinted</label>
-                <input type="url" class="form-input ri-link" placeholder="https://vinted.es/items/...">
+                <label class="form-label">Enlace StockX / Vinted</label>
+                <input type="url" class="form-input ri-link" value="${it.link||''}" placeholder="https://stockx.com/...">
               </div>
               <div class="form-group full">
                 <label class="form-label">Notas</label>
-                <input type="text" class="form-input ri-notas" placeholder="Detalles adicionales..." value="Recibido de pedido: ${p.proveedor}">
+                <input type="text" class="form-input ri-notas" placeholder="Detalles adicionales..." value="${it.notas || 'Recibido de pedido: ' + p.proveedor}">
               </div>
             </div>
           </div>`);
